@@ -35,12 +35,8 @@ const reservationSchema = new Schema({
 
   tableSize: {
     type: String,
-    required: [true]
   },
 },
-{
-timestamps: true
-}
 );
 
 const Reservation = model("Reservation", reservationSchema);

@@ -72,7 +72,7 @@ router.post("/", async (req, res, next) => {
         numGuests,
         tableSize: tableSizeRange,
       });
-  
+      
       res.status(201).json(response);
     } catch (error) {
       next(error);
