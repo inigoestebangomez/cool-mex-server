@@ -2,12 +2,17 @@ const express = require("express");
 const router = express.Router();
 const Reservation = require("../models/Reservation.model");
 
-const duration = 90; // Duración en minutos (1h30)
+// Duración en minutos para bloquear (1 hora antes y 1 hora 30 minutos después)
+const durationBefore = 60; // 1 hora antes
+const durationAfter = 90;  // 1 hora 30 minutos después
+
+// Función para convertir la hora en minutos (para hacer cálculos)
 const getTimeInMinutes = (time) => {
   const [hours, minutes] = time.split(":").map(Number);
   return hours * 60 + minutes;
 };
 
+// Cantidad de mesas disponibles según el número de comensales
 const table = {
   "2": 5,
   "3-4": 3,
@@ -15,6 +20,7 @@ const table = {
   "7-8": 1,
 };
 
+// Horarios disponibles
 const availableTimes = [
   "12:00",
   "12:30",
@@ -32,115 +38,119 @@ const availableTimes = [
 
 // POST "/" - Crear una nueva reserva
 router.post("/", async (req, res, next) => {
-    try {
-      const { name, email, phone, date, time, place, numGuests, tableSize } = req.body;
-      let tableSizeRange;
-  
-      // Determinar el tamaño de mesa según el número de comensales
-      if (numGuests <= 2) {
-        tableSizeRange = "2";
-      } else if (numGuests <= 4) {
-        tableSizeRange = "3-4";
-      } else if (numGuests <= 6) {
-        tableSizeRange = "5-6";
-      } else {
-        tableSizeRange = "7-8";
-      }
-  
-      // Verificar cuántas reservas ya existen para esa fecha, hora y tamaño de mesa
-      const getReservations = await Reservation.find({
-        date: new Date(date),
-        time: time,
-        tableSize: tableSizeRange,
-      });
-  
-      // Comparar las reservas existentes con el número total de mesas disponibles
-      const totalTablesAvailable = table[tableSizeRange];
-      const tablesAlreadyReserved = getReservations.length;
-  
-      if (tablesAlreadyReserved >= totalTablesAvailable)
-        return res.status(400).json({ message: "No hay disponibilidad" });
-  
-      // Crear la reserva si hay disponibilidad
-      const response = await Reservation.create({
-        name,
-        email,
-        phone,
-        date,
-        time,
-        place,
-        numGuests,
-        tableSize: tableSizeRange,
-      });
-      
-      res.status(201).json(response);
-    } catch (error) {
-      next(error);
+  try {
+    const { name, email, phone, date, time, place, numGuests, tableSize } = req.body;
+    let tableSizeRange;
+
+    // Determinar el tamaño de mesa según el número de comensales
+    if (numGuests <= 2) {
+      tableSizeRange = "2";
+    } else if (numGuests <= 4) {
+      tableSizeRange = "3-4";
+    } else if (numGuests <= 6) {
+      tableSizeRange = "5-6";
+    } else {
+      tableSizeRange = "7-8";
     }
-  });
 
-// GET "/availability/:date/:numGuests" - Verificar si ya hay mesas disponibles
+    // Verificar cuántas reservas ya existen para esa fecha, hora y tamaño de mesa
+    const getReservations = await Reservation.find({
+      date: new Date(date),
+      time: time,
+      tableSize: tableSizeRange,
+    });
+
+    // Comparar las reservas existentes con el número total de mesas disponibles
+    const totalTablesAvailable = table[tableSizeRange];
+    const tablesAlreadyReserved = getReservations.length;
+
+    if (tablesAlreadyReserved >= totalTablesAvailable)
+      return res.status(400).json({ message: "No hay disponibilidad" });
+
+    // Crear la reserva si hay disponibilidad
+    const response = await Reservation.create({
+      name,
+      email,
+      phone,
+      date,
+      time,
+      place,
+      numGuests,
+      tableSize: tableSizeRange,
+    });
+    
+    res.status(201).json(response);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET "/availability/:date/:numGuests" - Verificar si hay mesas disponibles
 router.get("/availability/:date/:numGuests", async (req, res, next) => {
-    try {
-      const date = req.params.date;
-      const numGuests = parseInt(req.params.numGuests, 10);
-      let tableSizeRange;
-  
-      // Determinar el tamaño de mesa según el número de comensales
-      if (numGuests <= 2) {
-        tableSizeRange = "2";
-      } else if (numGuests <= 4) {
-        tableSizeRange = "3-4";
-      } else if (numGuests <= 6) {
-        tableSizeRange = "5-6";
-      } else {
-        tableSizeRange = "7-8";
-      }
-  
-      // Verificar cuántas reservas ya existen para esa fecha y tamaño de mesa
-      const reservationsForDate = await Reservation.find({
-        date: new Date(date),
-        tableSize: tableSizeRange,
-      });
-  
-      // Crear un conjunto que cuenta las reservas por hora, y bloquea las horas adicionales
-      const blockedTimes = new Set();
-      
-      reservationsForDate.forEach((reservation) => {
-        const time = reservation.time;
-  
-        // Obtener el tiempo en minutos para la hora reservada
-        const timeInMinutes = getTimeInMinutes(time);
+  try {
+    const date = req.params.date;
+    const numGuests = parseInt(req.params.numGuests, 10);
+    let tableSizeRange;
 
-        // Verificar si hay mesas disponibles para esa hora específica
+    // Determinar el tamaño de mesa según el número de comensales
+    if (numGuests <= 2) {
+      tableSizeRange = "2";
+    } else if (numGuests <= 4) {
+      tableSizeRange = "3-4";
+    } else if (numGuests <= 6) {
+      tableSizeRange = "5-6";
+    } else {
+      tableSizeRange = "7-8";
+    }
+
+    // Verificar cuántas reservas ya existen para esa fecha y tamaño de mesa
+    const reservationsForDate = await Reservation.find({
+      date: new Date(date),
+      tableSize: tableSizeRange,
+    });
+
+    // Crear un conjunto que almacena los horarios bloqueados
+    const blockedTimes = new Set();
+    
+    reservationsForDate.forEach((reservation) => {
+      const reservedTime = reservation.time;
+
+      // Obtener el tiempo en minutos para la hora reservada
+      const reservedTimeInMinutes = getTimeInMinutes(reservedTime);
+
+      // Verificar cuántas mesas están reservadas para esa hora
       const tablesReservedAtThisTime = reservationsForDate.filter(
-        (res) => res.time === time
+        (res) => res.time === reservedTime
       ).length;
-      // Si no hay más mesas disponibles para esta hora, bloqueamos el horario
+
+      // Si no hay más mesas disponibles para esa hora, bloqueamos el horario
       if (tablesReservedAtThisTime >= table[tableSizeRange]) {
-        blockedTimes.add(time);
-  
-        // Bloquear las horas posteriores durante 1h30min
+        blockedTimes.add(reservedTime);
+
+        // Bloquear los horarios 60 minutos antes y 90 minutos después de la reserva
         availableTimes.forEach((availableTime) => {
           const availableTimeInMinutes = getTimeInMinutes(availableTime);
+
+          // Bloqueamos si el horario está dentro del rango de 1 hora antes y 1h30 después
           if (
-            availableTimeInMinutes > timeInMinutes &&
-            availableTimeInMinutes <= timeInMinutes + duration
+            availableTimeInMinutes >= reservedTimeInMinutes - durationBefore &&
+            availableTimeInMinutes <= reservedTimeInMinutes + durationAfter
           ) {
             blockedTimes.add(availableTime);
           }
         });
-    }
-      });
-  
-      // Filtrar las horas disponibles
-      const availableTimesFiltered = availableTimes.filter(
-          (time) => !blockedTimes.has(time)
-        );
-      res.status(200).json({ availableTimes: availableTimesFiltered });
-    } catch (error) {
-      next(error);
-    }
-  });
+      }
+    });
+
+    // Filtrar las horas disponibles, excluyendo las bloqueadas
+    const availableTimesFiltered = availableTimes.filter(
+      (time) => !blockedTimes.has(time)
+    );
+
+    res.status(200).json({ availableTimes: availableTimesFiltered });
+  } catch (error) {
+    next(error);
+  }
+});
 
 module.exports = router;
