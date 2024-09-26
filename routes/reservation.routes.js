@@ -106,7 +106,12 @@ router.post("/", async (req, res, next) => {
     };
 
     // Enviar el correo de confirmación
-    await transporter.sendMail(mailOptions);
+    try {
+      await transporter.sendMail(mailOptions);
+  } catch (emailError) {
+      console.error('Error sending email:', emailError);
+  }
+
 
     res.status(201).json(response);
   } catch (error) {
