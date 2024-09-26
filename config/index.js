@@ -22,13 +22,9 @@ module.exports = (app) => {
   app.set("trust proxy", 1);
 
   // controls a very specific header to pass headers from the frontend
-  app.use(
-    cors(
-      // credentials: true,
-      // origin: [FRONTEND_URL]
-      cors()
-    )
-  );
+  app.use(cors({
+    origin: 'https://cool-mex.netlify.app'
+}));
 
   // In development environment the app logs
   app.use(logger("dev"));
