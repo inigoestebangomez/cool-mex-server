@@ -1,5 +1,7 @@
 const { Schema, model } = require("mongoose");
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const reservationSchema = new Schema({
   name: {
     type: String,
@@ -8,9 +10,9 @@ const reservationSchema = new Schema({
   email: {
     type: String,
     required: [true, "Email is required."],
-    unique: true,
     lowercase: true,
     trim: true,
+    match: [emailRegex, "Please enter a valid email address."]
   },
   phone: {
     type: Number,
