@@ -125,7 +125,7 @@ router.post("/", async (req, res, next) => {
       const messages = Object.values(error.errors).map((err) => err.message);
       return res.status(400).json({ message: messages.join(", ") });
     }
-
+    console.log("Nodemailer user:", process.env.PASS_NODEMAILER_USER);
     // En caso de otros errores
     next(error);
   }
