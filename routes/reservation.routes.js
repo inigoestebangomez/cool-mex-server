@@ -105,14 +105,13 @@ router.post("/", async (req, res, next) => {
                <p>Te esperamos! Ándaleee!</p>`,
     };
 
-    // Enviar el correo de confirmación
-    // try {
-    //   await transporter.sendMail(mailOptions);
-    //   console.log('Email sent successfully');
-    // } catch (emailError) {
-    //   console.error('Error sending email:', emailError);
-    //   return res.status(500).json({ message: 'Error sending confirmation email' });
-    // }
+    try {
+      // Enviar correo después de la reserva
+      await sendConfirmationEmail(req.body.email, reservation);
+  } catch (emailError) {
+      console.error('Error sending email:', emailError);
+     
+  }
 
 
     res.status(201).json(response);
@@ -123,7 +122,6 @@ router.post("/", async (req, res, next) => {
       const messages = Object.values(error.errors).map((err) => err.message);
       return res.status(400).json({ message: messages.join(", ") });
     }
-    console.log("Nodemailer user:", process.env.PASS_NODEMAILER_USER);
     // En caso de otros errores
     next(error);
   }
