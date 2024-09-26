@@ -15,8 +15,6 @@ const transporter = nodemailer.createTransport({
   tls: {
     ciphers: "SSLv3", // para evitar problemas de seguridad
   },
-  logger: true,
-  debug: true,
 });
 
 // Duración en minutos para bloquear (1 hora antes y 1 hora 30 minutos después)
@@ -108,13 +106,13 @@ router.post("/", async (req, res, next) => {
     };
 
     // Enviar el correo de confirmación
-    try {
-      await transporter.sendMail(mailOptions);
-      console.log('Email sent successfully');
-    } catch (emailError) {
-      console.error('Error sending email:', emailError);
-      return res.status(500).json({ message: 'Error sending confirmation email' });
-    }
+    // try {
+    //   await transporter.sendMail(mailOptions);
+    //   console.log('Email sent successfully');
+    // } catch (emailError) {
+    //   console.error('Error sending email:', emailError);
+    //   return res.status(500).json({ message: 'Error sending confirmation email' });
+    // }
 
 
     res.status(201).json(response);
