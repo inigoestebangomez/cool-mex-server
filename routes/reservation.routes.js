@@ -15,6 +15,8 @@ const transporter = nodemailer.createTransport({
   tls: {
     ciphers: "SSLv3", // para evitar problemas de seguridad
   },
+  logger: true,
+  debug: true,
 });
 
 // Duración en minutos para bloquear (1 hora antes y 1 hora 30 minutos después)
