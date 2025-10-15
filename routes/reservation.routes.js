@@ -96,7 +96,7 @@ router.post("/", async (req, res, next) => {
     });
 
     const mailOptions = {
-      from: PASS_NODEMAILER_USER,
+      from: process.env.PASS_NODEMAILER_USER,
       to: email,
       subject: "COOL-MEX: Confirmación de Reserva",
       text: `Hola ${name},\n\nTu reserva para ${numGuests} personas el ${date} a las ${time}h ha sido confirmada.\n\nTe esperamos! Ándaleee!.`,
@@ -106,13 +106,12 @@ router.post("/", async (req, res, next) => {
     };
 
     try {
-      // Enviar correo después de la reserva
-      await sendConfirmationEmail(req.body.email, reservation);
-  } catch (emailError) {
-      console.error('Error sending email:', emailError);
-     
-  }
+      await transporter.sendMail(mailOptions);
+    } catch (emailError) {
+      console.error("Error sending email:", emailError);
+    }
 
+    res.status(201).json(response);
 
     res.status(201).json(response);
   } catch (error) {
